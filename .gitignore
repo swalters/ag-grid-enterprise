@@ -3,4 +3,5 @@ src/**/*.js
 
 node_modules/
 
+.idea/
 ag-grid-enterprise.iml
