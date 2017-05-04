@@ -1,4 +1,4 @@
-// ag-grid-enterprise v9.1.0
+// ag-grid-enterprise v9.1.2
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -120,7 +120,21 @@ var ClipboardService = (function () {
                 if (!column.isCellEditable(rowNode)) {
                     return;
                 }
-                _this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds);
+                //singletree start
+                //added our own pasteHandler
+                if (column.colDef.pasteHandler) {
+                    var params = {};
+                    params.context = rowNode.gridOptionsWrapper.gridOptions.context;
+                    params.data = rowNode.data;
+                    params.column = column;
+                    params.node = rowNode;
+                    params.value = value;
+                    column.colDef.pasteHandler(params);
+                }
+                else {
+                    _this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds);
+                }
+                //singletree end
             });
             // move to next row down for next set of values
             currentRow = _this.cellNavigationService.getRowBelow(currentRow);
@@ -133,7 +147,20 @@ var ClipboardService = (function () {
         var rowCallback = function (gridRow, rowNode, columns) {
             updatedRowNodes.push(rowNode);
             columns.forEach(function (column) {
-                _this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds);
+                //singletree start
+                //added our own pasteHandler
+                if (column.colDef.pasteHandler) {
+                    var params = {};
+                    params.context = rowNode.gridOptionsWrapper.gridOptions.context;
+                    params.data = rowNode.data;
+                    params.column = column;
+                    params.node = rowNode;
+                    params.value = value;
+                    column.colDef.pasteHandler(params);
+                }
+                else {
+                    _this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds);
+                }
             });
         };
         this.iterateActiveRanges(false, rowCallback);

@@ -1,4 +1,4 @@
-// ag-grid-enterprise v9.1.0
+// ag-grid-enterprise v9.1.2
 import { Component } from 'ag-grid/main';
 export declare class StatusBar extends Component {
     private static TEMPLATE;
@@ -10,6 +10,9 @@ export declare class StatusBar extends Component {
     private rowModel;
     private context;
     private gridOptionsWrapper;
+    private totalItems;
+    private filteredItems;
+    private selectedItems;
     private statusItemSum;
     private statusItemCount;
     private statusItemMin;
@@ -23,4 +26,6 @@ export declare class StatusBar extends Component {
     private forEachStatusItem(callback);
     private onRangeSelectionChanged();
     private getRowNode(gridRow);
+    private onSelectionChanged();
+    private onRowDataChanged();
 }
