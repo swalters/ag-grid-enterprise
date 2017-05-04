@@ -181,6 +181,24 @@ export class ClipboardService implements IClipboardService {
                 }
                 if (!column.isCellEditable(rowNode)) {
                     return;
+                //singletree start
+                //added our own pasteHandler
+                if((<any>column).colDef.pasteHandler){
+                    let params:any = {};
+                    params.context = (<any>rowNode).gridOptionsWrapper.gridOptions.context;
+                    params.data = rowNode.data;
+                    params.column = column;
+                    params.rowNode = rowNode;
+                    params.value = value;
+                    (<any>column).colDef.pasteHandler(params);
+                }
+                else {
+                    let processedValue = this.processRangeCell(rowNode, column, value,
+                                                               this.gridOptionsWrapper.getProcessCellFromClipboardFunc());
+                    this.valueService.setValue(rowNode, column, processedValue);
+                }
+                //singletree end
+
                 }
 
                 this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds);
