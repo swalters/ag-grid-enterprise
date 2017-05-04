@@ -181,6 +181,7 @@ export class ClipboardService implements IClipboardService {
                 }
                 if (!column.isCellEditable(rowNode)) {
                     return;
+                }
                 //singletree start
                 //added our own pasteHandler
                 if((<any>column).colDef.pasteHandler){
@@ -188,20 +189,15 @@ export class ClipboardService implements IClipboardService {
                     params.context = (<any>rowNode).gridOptionsWrapper.gridOptions.context;
                     params.data = rowNode.data;
                     params.column = column;
-                    params.rowNode = rowNode;
+                    params.node = rowNode;
                     params.value = value;
                     (<any>column).colDef.pasteHandler(params);
                 }
                 else {
-                    let processedValue = this.processRangeCell(rowNode, column, value,
-                                                               this.gridOptionsWrapper.getProcessCellFromClipboardFunc());
-                    this.valueService.setValue(rowNode, column, processedValue);
+                    this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds);
                 }
                 //singletree end
 
-                }
-
-                this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds);
             });
             // move to next row down for next set of values
             currentRow = this.cellNavigationService.getRowBelow(currentRow);
@@ -214,7 +210,20 @@ export class ClipboardService implements IClipboardService {
         var rowCallback = (gridRow: GridRow, rowNode: RowNode, columns: Column[]) => {
             updatedRowNodes.push(rowNode);
             columns.forEach((column) => {
-                this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds);
+                //singletree start
+                //added our own pasteHandler
+                if((<any>column).colDef.pasteHandler){
+                    let params:any = {};
+                    params.context = (<any>rowNode).gridOptionsWrapper.gridOptions.context;
+                    params.data = rowNode.data;
+                    params.column = column;
+                    params.node = rowNode;
+                    params.value = value;
+                    (<any>column).colDef.pasteHandler(params);
+                }
+                else {
+                    this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds);
+                }
             })
         };
         this.iterateActiveRanges(false, rowCallback);
