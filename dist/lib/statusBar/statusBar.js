@@ -28,10 +28,19 @@ var StatusBar = StatusBar_1 = (function (_super) {
     StatusBar.prototype.init = function () {
         this.createStatusItems();
         this.eventService.addEventListener(main_1.Events.EVENT_RANGE_SELECTION_CHANGED, this.onRangeSelectionChanged.bind(this));
+        //singletree begin
+        this.eventService.addEventListener(main_1.Events.EVENT_SELECTION_CHANGED, this.onSelectionChanged.bind(this));
+        this.eventService.addEventListener(main_1.Events.EVENT_MODEL_UPDATED, this.onRowDataChanged.bind(this));
+        //singletree end
     };
     StatusBar.prototype.createStatusItems = function () {
         var _this = this;
         var localeTextFunc = this.gridOptionsWrapper.getLocaleTextFunc();
+        //singletree begin
+        this.totalItems = new statusItem_1.StatusItem(localeTextFunc('rows', 'Total Rows'));
+        this.filteredItems = new statusItem_1.StatusItem(localeTextFunc('rows', 'Filtered'));
+        this.selectedItems = new statusItem_1.StatusItem(localeTextFunc('selected', 'Selected'));
+        //singletree end
         this.statusItemSum = new statusItem_1.StatusItem(localeTextFunc('sum', 'Sum'));
         this.statusItemCount = new statusItem_1.StatusItem(localeTextFunc('count', 'Count'));
         this.statusItemMin = new statusItem_1.StatusItem(localeTextFunc('min', 'Min'));
@@ -46,7 +55,9 @@ var StatusBar = StatusBar_1 = (function (_super) {
         this.appendChild(this.aggregationsComponent);
     };
     StatusBar.prototype.forEachStatusItem = function (callback) {
-        [this.statusItemAvg, this.statusItemCount, this.statusItemMin, this.statusItemMax, this.statusItemSum].forEach(callback);
+        //singletree begin
+        [this.totalItems, this.filteredItems, this.selectedItems, this.statusItemAvg, this.statusItemCount, this.statusItemMin, this.statusItemMax, this.statusItemSum].forEach(callback);
+        //singletree end
     };
     StatusBar.prototype.onRangeSelectionChanged = function () {
         var _this = this;
@@ -133,6 +144,31 @@ var StatusBar = StatusBar_1 = (function (_super) {
             default:
                 return this.rowModel.getRow(gridRow.rowIndex);
         }
+    };
+    //singletree begin
+    StatusBar.prototype.onSelectionChanged = function () {
+        var selectedRows = 0;
+        this.gridOptionsWrapper.getApi().forEachNodeAfterFilterAndSort(function (rowNode) {
+            if (!rowNode.group && rowNode.isSelected()) {
+                selectedRows++;
+            }
+        });
+        this.selectedItems.setValue(selectedRows);
+        this.selectedItems.setVisible(selectedRows > 0);
+    };
+    StatusBar.prototype.onRowDataChanged = function () {
+        var filteredRows = 0;
+        var totalRows = this.gridOptionsWrapper.getApi().rowModel.rootNode.allLeafChildren.length;
+        this.gridOptionsWrapper.getApi().forEachNodeAfterFilter(function (n) {
+            if (!n.group) {
+                filteredRows++;
+            }
+        });
+        this.filteredItems.setValue(filteredRows);
+        this.filteredItems.setVisible(filteredRows !== totalRows);
+        this.totalItems.setValue(totalRows);
+        this.totalItems.setVisible(true);
+        this.onSelectionChanged();
     };
     return StatusBar;
 }(main_1.Component));

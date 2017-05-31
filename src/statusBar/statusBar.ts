@@ -20,6 +20,12 @@ export class StatusBar extends Component {
     @Autowired('context') private context: Context;
     @Autowired('gridOptionsWrapper') private gridOptionsWrapper: GridOptionsWrapper;
 
+    //singletree begin
+    private totalItems: StatusItem;
+    private filteredItems: StatusItem;
+    private selectedItems: StatusItem;
+    //singletree end
+
     private statusItemSum: StatusItem;
     private statusItemCount: StatusItem;
     private statusItemMin: StatusItem;
@@ -37,10 +43,20 @@ export class StatusBar extends Component {
     private init(): void {
         this.createStatusItems();
         this.eventService.addEventListener(Events.EVENT_RANGE_SELECTION_CHANGED, this.onRangeSelectionChanged.bind(this));
+        //singletree begin
+        this.eventService.addEventListener(Events.EVENT_SELECTION_CHANGED, this.onSelectionChanged.bind(this));
+        this.eventService.addEventListener(Events.EVENT_MODEL_UPDATED, this.onRowDataChanged.bind(this));
+        //singletree end
     }
 
     private createStatusItems(): void {
         var localeTextFunc = this.gridOptionsWrapper.getLocaleTextFunc();
+
+        //singletree begin
+        this.totalItems = new StatusItem(localeTextFunc('rows', 'Total Rows'));
+        this.filteredItems = new StatusItem(localeTextFunc('rows', 'Filtered'));
+        this.selectedItems = new StatusItem(localeTextFunc('selected', 'Selected'));
+        //singletree end
 
         this.statusItemSum = new StatusItem(localeTextFunc('sum', 'Sum'));
         this.statusItemCount = new StatusItem(localeTextFunc('count', 'Count'));
@@ -59,7 +75,9 @@ export class StatusBar extends Component {
     }
 
     private forEachStatusItem(callback: (statusItem: StatusItem)=>void): void {
-        [this.statusItemAvg, this.statusItemCount, this.statusItemMin, this.statusItemMax, this.statusItemSum].forEach(callback);
+        //singletree begin
+        [this.totalItems, this.filteredItems, this.selectedItems, this.statusItemAvg, this.statusItemCount, this.statusItemMin, this.statusItemMax, this.statusItemSum].forEach(callback);
+        //singletree end
     }
 
     private onRangeSelectionChanged(): void {
@@ -174,4 +192,38 @@ export class StatusBar extends Component {
                 return this.rowModel.getRow(gridRow.rowIndex);
         }
     }
+
+    //singletree begin
+    private onSelectionChanged() {
+        var selectedRows = 0;
+
+        this.gridOptionsWrapper.getApi().forEachNodeAfterFilterAndSort((rowNode) => {
+            if (!rowNode.group && rowNode.isSelected()) {
+                selectedRows++;
+            }
+        });
+
+        this.selectedItems.setValue(selectedRows);
+        this.selectedItems.setVisible(selectedRows > 0);
+    }
+
+    private onRowDataChanged() {
+        var filteredRows = 0;
+        var totalRows = (<any>this.gridOptionsWrapper.getApi()).rowModel.rootNode.allLeafChildren.length;
+
+        this.gridOptionsWrapper.getApi().forEachNodeAfterFilter((n) => {
+            if (!n.group) {
+                filteredRows++;
+            }
+        });
+
+        this.filteredItems.setValue(filteredRows);
+        this.filteredItems.setVisible(filteredRows !== totalRows);
+
+        this.totalItems.setValue(totalRows);
+        this.totalItems.setVisible(true);
+
+        this.onSelectionChanged();
+    }
+    //singletree end
 }

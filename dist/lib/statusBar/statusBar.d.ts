@@ -10,6 +10,9 @@ export declare class StatusBar extends Component {
     private rowModel;
     private context;
     private gridOptionsWrapper;
+    private totalItems;
+    private filteredItems;
+    private selectedItems;
     private statusItemSum;
     private statusItemCount;
     private statusItemMin;
@@ -23,4 +26,6 @@ export declare class StatusBar extends Component {
     private forEachStatusItem(callback);
     private onRangeSelectionChanged();
     private getRowNode(gridRow);
+    private onSelectionChanged();
+    private onRowDataChanged();
 }

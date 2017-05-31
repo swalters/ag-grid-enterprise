@@ -14715,7 +14715,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    // this.popupService.setPopupParent(this.eRootPanel.getGui());
 	    PopupService.prototype.getPopupParent = function () {
-	        return this.gridCore.getRootGui();
+	        //singletree use outer grid container
+	        return this.getOuterContainer(this.gridCore.getRootGui());
+	    };
+	    //singletree method to find outermost grid container
+	    PopupService.prototype.getOuterContainer = function (element) {
+	        var lastFoundContainer;
+	        var traverseElement = element;
+	        while (traverseElement.parentElement) {
+	            if (traverseElement.id == 'borderLayout_eRootPanel') {
+	                lastFoundContainer = traverseElement;
+	            }
+	            traverseElement = traverseElement.parentElement;
+	        }
+	        return lastFoundContainer
+	            ? lastFoundContainer
+	            : element;
 	    };
 	    PopupService.prototype.positionPopupForMenu = function (params) {
 	        var sourceRect = params.eventSource.getBoundingClientRect();
@@ -19945,10 +19960,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    GroupCellRenderer.prototype.addValueElement = function () {
 	        var params = this.params;
 	        var rowNode = this.params.node;
-	        if (params.innerRenderer) {
-	            this.createFromInnerRenderer();
-	        }
-	        else if (rowNode.footer) {
+	        //singletree changed to properly present group values when using innerRenderer
+	        if (rowNode.footer) {
 	            this.createFooterCell();
 	        }
 	        else if (rowNode.group) {
@@ -19956,7 +19969,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	            this.addChildCount();
 	        }
 	        else {
-	            this.createLeafCell();
+	            if (params.innerRenderer) {
+	                this.createFromInnerRenderer();
+	            }
+	            else {
+	                this.createLeafCell();
+	            }
 	        }
 	    };
 	    GroupCellRenderer.prototype.createFromInnerRenderer = function () {
@@ -30478,7 +30496,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	                if (!column.isCellEditable(rowNode)) {
 	                    return;
 	                }
-	                _this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds);
+	                //singletree start
+	                //added our own pasteHandler
+	                if (column.colDef.pasteHandler) {
+	                    var params = {};
+	                    params.context = rowNode.gridOptionsWrapper.gridOptions.context;
+	                    params.data = rowNode.data;
+	                    params.column = column;
+	                    params.node = rowNode;
+	                    params.value = value;
+	                    column.colDef.pasteHandler(params);
+	                }
+	                else {
+	                    _this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds);
+	                }
+	                //singletree end
 	            });
 	            // move to next row down for next set of values
 	            currentRow = _this.cellNavigationService.getRowBelow(currentRow);
@@ -30491,7 +30523,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var rowCallback = function (gridRow, rowNode, columns) {
 	            updatedRowNodes.push(rowNode);
 	            columns.forEach(function (column) {
-	                _this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds);
+	                //singletree start
+	                //added our own pasteHandler
+	                if (column.colDef.pasteHandler) {
+	                    var params = {};
+	                    params.context = rowNode.gridOptionsWrapper.gridOptions.context;
+	                    params.data = rowNode.data;
+	                    params.column = column;
+	                    params.node = rowNode;
+	                    params.value = value;
+	                    column.colDef.pasteHandler(params);
+	                }
+	                else {
+	                    _this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds);
+	                }
 	            });
 	        };
 	        this.iterateActiveRanges(false, rowCallback);
@@ -33517,10 +33562,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	    StatusBar.prototype.init = function () {
 	        this.createStatusItems();
 	        this.eventService.addEventListener(main_1.Events.EVENT_RANGE_SELECTION_CHANGED, this.onRangeSelectionChanged.bind(this));
+	        //singletree begin
+	        this.eventService.addEventListener(main_1.Events.EVENT_SELECTION_CHANGED, this.onSelectionChanged.bind(this));
+	        this.eventService.addEventListener(main_1.Events.EVENT_MODEL_UPDATED, this.onRowDataChanged.bind(this));
+	        //singletree end
 	    };
 	    StatusBar.prototype.createStatusItems = function () {
 	        var _this = this;
 	        var localeTextFunc = this.gridOptionsWrapper.getLocaleTextFunc();
+	        //singletree begin
+	        this.totalItems = new statusItem_1.StatusItem(localeTextFunc('rows', 'Total Rows'));
+	        this.filteredItems = new statusItem_1.StatusItem(localeTextFunc('rows', 'Filtered'));
+	        this.selectedItems = new statusItem_1.StatusItem(localeTextFunc('selected', 'Selected'));
+	        //singletree end
 	        this.statusItemSum = new statusItem_1.StatusItem(localeTextFunc('sum', 'Sum'));
 	        this.statusItemCount = new statusItem_1.StatusItem(localeTextFunc('count', 'Count'));
 	        this.statusItemMin = new statusItem_1.StatusItem(localeTextFunc('min', 'Min'));
@@ -33535,7 +33589,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this.appendChild(this.aggregationsComponent);
 	    };
 	    StatusBar.prototype.forEachStatusItem = function (callback) {
-	        [this.statusItemAvg, this.statusItemCount, this.statusItemMin, this.statusItemMax, this.statusItemSum].forEach(callback);
+	        //singletree begin
+	        [this.totalItems, this.filteredItems, this.selectedItems, this.statusItemAvg, this.statusItemCount, this.statusItemMin, this.statusItemMax, this.statusItemSum].forEach(callback);
+	        //singletree end
 	    };
 	    StatusBar.prototype.onRangeSelectionChanged = function () {
 	        var _this = this;
@@ -33622,6 +33678,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	            default:
 	                return this.rowModel.getRow(gridRow.rowIndex);
 	        }
+	    };
+	    //singletree begin
+	    StatusBar.prototype.onSelectionChanged = function () {
+	        var selectedRows = 0;
+	        this.gridOptionsWrapper.getApi().forEachNodeAfterFilterAndSort(function (rowNode) {
+	            if (!rowNode.group && rowNode.isSelected()) {
+	                selectedRows++;
+	            }
+	        });
+	        this.selectedItems.setValue(selectedRows);
+	        this.selectedItems.setVisible(selectedRows > 0);
+	    };
+	    StatusBar.prototype.onRowDataChanged = function () {
+	        var filteredRows = 0;
+	        var totalRows = this.gridOptionsWrapper.getApi().rowModel.rootNode.allLeafChildren.length;
+	        this.gridOptionsWrapper.getApi().forEachNodeAfterFilter(function (n) {
+	            if (!n.group) {
+	                filteredRows++;
+	            }
+	        });
+	        this.filteredItems.setValue(filteredRows);
+	        this.filteredItems.setVisible(filteredRows !== totalRows);
+	        this.totalItems.setValue(totalRows);
+	        this.totalItems.setVisible(true);
+	        this.onSelectionChanged();
 	    };
 	    return StatusBar;
 	}(main_1.Component));
