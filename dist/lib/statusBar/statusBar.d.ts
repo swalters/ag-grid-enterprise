@@ -2,6 +2,7 @@
 import { Component } from 'ag-grid/main';
 export declare class StatusBar extends Component {
     private static TEMPLATE;
+    private gridApi;
     private eventService;
     private rangeController;
     private valueService;

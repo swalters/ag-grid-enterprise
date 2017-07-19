@@ -148,7 +148,7 @@ var StatusBar = StatusBar_1 = (function (_super) {
     //singletree begin
     StatusBar.prototype.onSelectionChanged = function () {
         var selectedRows = 0;
-        this.gridOptionsWrapper.getApi().forEachNodeAfterFilterAndSort(function (rowNode) {
+        this.gridApi.forEachNodeAfterFilterAndSort(function (rowNode) {
             if (!rowNode.group && rowNode.isSelected()) {
                 selectedRows++;
             }
@@ -158,8 +158,8 @@ var StatusBar = StatusBar_1 = (function (_super) {
     };
     StatusBar.prototype.onRowDataChanged = function () {
         var filteredRows = 0;
-        var totalRows = this.gridOptionsWrapper.getApi().rowModel.rootNode.allLeafChildren.length;
-        this.gridOptionsWrapper.getApi().forEachNodeAfterFilter(function (n) {
+        var totalRows = this.gridApi.getModel().rootNode.allLeafChildren.length;
+        this.gridApi.forEachNodeAfterFilter(function (n) {
             if (!n.group) {
                 filteredRows++;
             }
@@ -174,6 +174,10 @@ var StatusBar = StatusBar_1 = (function (_super) {
 }(main_1.Component));
 StatusBar.TEMPLATE = '<div class="ag-status-bar">' +
     '</div>';
+__decorate([
+    main_1.Autowired('gridApi'),
+    __metadata("design:type", main_1.GridApi)
+], StatusBar.prototype, "gridApi", void 0);
 __decorate([
     main_1.Autowired('eventService'),
     __metadata("design:type", main_1.EventService)

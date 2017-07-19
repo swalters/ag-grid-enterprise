@@ -1,6 +1,6 @@
 import {EventService, Component, Autowired, PostConstruct, Events, Utils, Column,
     GridRow, RowNode, Constants, FloatingRowModel, IRowModel, ValueService,
-    CellNavigationService, Bean, Context, GridOptionsWrapper, GridCell} from 'ag-grid/main';
+    CellNavigationService, Bean, Context, GridOptionsWrapper, GridCell, GridApi} from 'ag-grid/main';
 import {StatusItem} from "./statusItem";
 import {RangeController} from "../rangeController";
 
@@ -10,6 +10,10 @@ export class StatusBar extends Component {
     private static TEMPLATE =
         '<div class="ag-status-bar">' +
         '</div>';
+
+    //singletree begin
+    @Autowired('gridApi') private gridApi: GridApi;
+    //singletree end
 
     @Autowired('eventService') private eventService: EventService;
     @Autowired('rangeController') private rangeController: RangeController;
@@ -197,7 +201,7 @@ export class StatusBar extends Component {
     private onSelectionChanged() {
         var selectedRows = 0;
 
-        this.gridOptionsWrapper.getApi().forEachNodeAfterFilterAndSort((rowNode) => {
+        this.gridApi.forEachNodeAfterFilterAndSort((rowNode) => {
             if (!rowNode.group && rowNode.isSelected()) {
                 selectedRows++;
             }
@@ -209,9 +213,10 @@ export class StatusBar extends Component {
 
     private onRowDataChanged() {
         var filteredRows = 0;
-        var totalRows = (<any>this.gridOptionsWrapper.getApi()).rowModel.rootNode.allLeafChildren.length;
+        var totalRows = (<any> this.gridApi.getModel()).rootNode.allLeafChildren.length;
 
-        this.gridOptionsWrapper.getApi().forEachNodeAfterFilter((n) => {
+
+        this.gridApi.forEachNodeAfterFilter((n) => {
             if (!n.group) {
                 filteredRows++;
             }
