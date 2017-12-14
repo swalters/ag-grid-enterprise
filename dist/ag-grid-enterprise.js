@@ -9189,6 +9189,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	            });
 	        }
 	        event.preventDefault();
+	        //singletree start
+	        event.stopPropagation();
+	        //singletree end
 	        return false;
 	    };
 	    GridPanel.prototype.onCtrlAndC = function (event) {
@@ -9198,6 +9201,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var focusedCell = this.focusedCellController.getFocusedCell();
 	        this.clipboardService.copyToClipboard();
 	        event.preventDefault();
+	        //singletree start
+	        event.stopPropagation();
+	        //singletree end
 	        // the copy operation results in loosing focus on the cell,
 	        // because of the trickery the copy logic uses with a temporary
 	        // widget. so we set it back again.
@@ -9210,6 +9216,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        if (!this.rangeController) {
 	            return;
 	        }
+	        //singletree start
+	        event.stopPropagation();
+	        //singletree end
 	        this.clipboardService.pasteFromClipboard();
 	        return false;
 	    };
@@ -9219,6 +9228,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 	        this.clipboardService.copyRangeDown();
 	        event.preventDefault();
+	        //singletree start
+	        event.stopPropagation();
+	        //singletree end
 	        return false;
 	    };
 	    GridPanel.prototype.createOverlayTemplate = function (name, defaultTemplate, userProvidedTemplate) {
@@ -33567,6 +33579,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return _this;
 	    }
 	    StatusBar.prototype.init = function () {
+	        //singletree begin - don't initialize statusbar unless we are using it
+	        if (!this.gridOptionsWrapper.isEnableStatusBar()) {
+	            return;
+	        }
+	        //singletree end
 	        this.createStatusItems();
 	        this.eventService.addEventListener(main_1.Events.EVENT_RANGE_SELECTION_CHANGED, this.onRangeSelectionChanged.bind(this));
 	        //singletree begin

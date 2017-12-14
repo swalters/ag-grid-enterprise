@@ -26,6 +26,11 @@ var StatusBar = StatusBar_1 = (function (_super) {
         return _this;
     }
     StatusBar.prototype.init = function () {
+        //singletree begin - don't initialize statusbar unless we are using it
+        if (!this.gridOptionsWrapper.isEnableStatusBar()) {
+            return;
+        }
+        //singletree end
         this.createStatusItems();
         this.eventService.addEventListener(main_1.Events.EVENT_RANGE_SELECTION_CHANGED, this.onRangeSelectionChanged.bind(this));
         //singletree begin

@@ -45,6 +45,13 @@ export class StatusBar extends Component {
 
     @PostConstruct
     private init(): void {
+
+      //singletree begin - don't initialize statusbar unless we are using it
+      if(!this.gridOptionsWrapper.isEnableStatusBar())
+      {
+        return;
+      }
+      //singletree end
         this.createStatusItems();
         this.eventService.addEventListener(Events.EVENT_RANGE_SELECTION_CHANGED, this.onRangeSelectionChanged.bind(this));
         //singletree begin
