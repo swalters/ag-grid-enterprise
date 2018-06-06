@@ -1,6 +1,8 @@
-import {EventService, Component, Autowired, PostConstruct, Events, _,
-    GridRow, RowNode, Constants, PinnedRowModel, IRowModel, ValueService, GridCore,
-    CellNavigationService, Bean, Context, GridOptionsWrapper} from 'ag-grid/main';
+import {
+  EventService, Component, Autowired, PostConstruct, Events, _,
+  GridRow, RowNode, Constants, PinnedRowModel, IRowModel, ValueService, GridCore,
+  CellNavigationService, Bean, Context, GridOptionsWrapper, GridApi
+} from 'ag-grid/main';
 import {StatusItem} from "./statusItem";
 import {RangeController} from "../rangeController";
 
@@ -182,7 +184,8 @@ export class StatusBar extends Component {
         if (gotResult) {
             this.statusItemCount.setValue(count);
         }
-        this.statusItemCount.setVisible(gotResult);
+        this.statusItemCount.setVisible(count > 0);
+
 
         // if numbers, then show the number items
         if (gotNumberResult) {
@@ -228,11 +231,10 @@ export class StatusBar extends Component {
     }
 
     private onRowDataChanged() {
-        var filteredRows = 0;
-        var totalRows = (<any> this.gridApi.getModel()).rootNode.allLeafChildren.length;
+      let filteredRows = 0;
+      const totalRows = (<any> this.gridApi.getModel()).rootNode.allLeafChildren.length;
 
-
-        this.gridApi.forEachNodeAfterFilter((n) => {
+      this.gridApi.forEachNodeAfterFilter((n) => {
             if (!n.group) {
                 filteredRows++;
             }

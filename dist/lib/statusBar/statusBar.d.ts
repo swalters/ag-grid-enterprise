@@ -2,6 +2,7 @@
 import { Component } from 'ag-grid/main';
 export declare class StatusBar extends Component {
     private static TEMPLATE;
+    private gridApi;
     private eventService;
     private rangeController;
     private valueService;
@@ -11,6 +12,9 @@ export declare class StatusBar extends Component {
     private context;
     private gridOptionsWrapper;
     private gridCore;
+    private totalItems;
+    private filteredItems;
+    private selectedItems;
     private statusItemSum;
     private statusItemCount;
     private statusItemMin;
@@ -24,4 +28,6 @@ export declare class StatusBar extends Component {
     private forEachStatusItem(callback);
     private onRangeSelectionChanged();
     private getRowNode(gridRow);
+    private onSelectionChanged();
+    private onRowDataChanged();
 }
