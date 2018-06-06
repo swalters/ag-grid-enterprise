@@ -21,10 +21,19 @@ import {MenuItemMapper} from "./menu/menuItemMapper";
 import {ExcelCreator} from "./excelCreator";
 import {ExcelXmlFactory} from "./excelXmlFactory";
 import {EnterpriseRowModel} from "./rowModels/enterprise/enterpriseRowModel";
+import {ColumnSelectHeaderComp} from "./toolPanel/columnsSelect/columnSelectHeaderComp";
+import {ColumnContainerComp} from "./toolPanel/columnsSelect/columnContainerComp";
+import {HorizontalResizeComp} from "./toolPanel/columnsSelect/horizontalResizeComp";
 
-var rowModelTypes = {viewport: ViewportRowModel, enterprise: EnterpriseRowModel};
+let rowModelTypes = {viewport: ViewportRowModel, enterprise: EnterpriseRowModel};
 
 Grid.setEnterpriseBeans([ToolPanelComp, EnterpriseMenuFactory, ExcelCreator, ExcelXmlFactory, RowGroupCompFactory, PivotCompFactory,
     PivotColumnsPanel, RangeController, ClipboardService, PivotStage, PivotColDefService,
     ContextMenuFactory, GroupStage, AggregationStage, EnterpriseBoot, AggFuncService,
     StatusBar, LicenseManager, MD5, MenuItemMapper], rowModelTypes);
+
+Grid.setEnterpriseComponents([
+    {componentName: 'AgColumnSelectHeader', theClass: ColumnSelectHeaderComp},
+    {componentName: 'AgColumnContainer', theClass: ColumnContainerComp},
+    {componentName: 'AgHorizontalResize', theClass: HorizontalResizeComp}
+]);

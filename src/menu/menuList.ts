@@ -1,5 +1,5 @@
 import {Utils as _, PopupService, MenuItemDef, Component, Autowired, Context} from "ag-grid";
-import {MenuItemComponent} from "./menuItemComponent";
+import {MenuItemComponent, MenuItemSelectedEvent} from "./menuItemComponent";
 
 export class MenuList extends Component {
 
@@ -51,17 +51,17 @@ export class MenuList extends Component {
     }
 
     public addItem(menuItemDef: MenuItemDef): void {
-        var cMenuItem = new MenuItemComponent(menuItemDef);
+        let cMenuItem = new MenuItemComponent(menuItemDef);
         this.context.wireBean(cMenuItem);
         this.getGui().appendChild(cMenuItem.getGui());
 
         this.addDestroyFunc( ()=> cMenuItem.destroy() );
 
-        cMenuItem.addEventListener(MenuItemComponent.EVENT_ITEM_SELECTED, (event: any) => {
+        cMenuItem.addEventListener(MenuItemComponent.EVENT_ITEM_SELECTED, (event: MenuItemSelectedEvent) => {
             if (menuItemDef.subMenu) {
-                this.showChildMenu(menuItemDef, cMenuItem);
+                this.showChildMenu(menuItemDef, cMenuItem, event.mouseEvent);
             } else {
-                this.dispatchEvent(MenuItemComponent.EVENT_ITEM_SELECTED, event)
+                this.dispatchEvent(event)
             }
         });
 
@@ -98,12 +98,12 @@ export class MenuList extends Component {
     }
 
     private addHoverForChildPopup(menuItemDef: MenuItemDef, menuItemComp: MenuItemComponent): void {
-        var timerCountCopy = this.timerCount;
+        let timerCountCopy = this.timerCount;
         setTimeout( ()=> {
-            var shouldShow = timerCountCopy===this.timerCount;
-            var showingThisMenu = this.subMenuParentDef === menuItemDef;
+            let shouldShow = timerCountCopy===this.timerCount;
+            let showingThisMenu = this.subMenuParentDef === menuItemDef;
             if (shouldShow && !showingThisMenu) {
-                this.showChildMenu(menuItemDef, menuItemComp);
+                this.showChildMenu(menuItemDef, menuItemComp, null);
             }
         }, 500);
     }
@@ -112,19 +112,21 @@ export class MenuList extends Component {
         this.getGui().appendChild(_.loadTemplate(MenuList.SEPARATOR_TEMPLATE));
     }
 
-    private showChildMenu(menuItemDef: MenuItemDef, menuItemComp: MenuItemComponent): void {
+    private showChildMenu(menuItemDef: MenuItemDef, menuItemComp: MenuItemComponent, mouseEvent: MouseEvent): void {
         this.removeChildPopup();
 
         let childMenu = new MenuList();
         this.context.wireBean(childMenu);
         childMenu.addMenuItems(menuItemDef.subMenu);
 
-        var ePopup = _.loadTemplate('<div class="ag-menu"></div>');
+        let ePopup = _.loadTemplate('<div class="ag-menu"></div>');
         ePopup.appendChild(childMenu.getGui());
 
-        var hidePopupFunc = this.popupService.addAsModalPopup(
+        let hidePopupFunc = this.popupService.addAsModalPopup(
             ePopup,
-            true
+            true,
+            null,
+            mouseEvent
         );
 
         this.popupService.positionPopupForMenu({
@@ -134,8 +136,8 @@ export class MenuList extends Component {
 
         this.subMenuParentDef = menuItemDef;
 
-        var selectedListener = (event: any)=> {
-            this.dispatchEvent(MenuItemComponent.EVENT_ITEM_SELECTED, event)
+        let selectedListener = (event: MenuItemSelectedEvent)=> {
+            this.dispatchEvent(event)
         };
         childMenu.addEventListener(MenuItemComponent.EVENT_ITEM_SELECTED, selectedListener);
 

@@ -8,8 +8,10 @@ import {
     EventService,
     Events,
     Context,
-    AgCheckbox
+    AgCheckbox,
+    PreConstruct
 } from "ag-grid/main";
+
 
 export class PivotModePanel extends Component {
 
@@ -25,13 +27,13 @@ export class PivotModePanel extends Component {
     }
 
     private createTemplate(): string {
-        var localeTextFunc = this.gridOptionsWrapper.getLocaleTextFunc();
+        let localeTextFunc = this.gridOptionsWrapper.getLocaleTextFunc();
         return `<div class="ag-pivot-mode">
                 <ag-checkbox class="ag-pivot-mode-select" label="${localeTextFunc('pivotMode', 'Pivot Mode')}"></ag-checkbox>
             </div>`;
     }
 
-    @PostConstruct
+    @PreConstruct
     private init(): void {
         this.setTemplate(this.createTemplate());
         this.instantiate(this.context);
@@ -44,15 +46,15 @@ export class PivotModePanel extends Component {
     }
     
     private onBtPivotMode(): void {
-        var newValue = this.cbPivotMode.isSelected();
+        let newValue = this.cbPivotMode.isSelected();
         if (newValue !== this.columnController.isPivotMode()) {
-            this.columnController.setPivotMode(newValue);
+            this.columnController.setPivotMode(newValue, "toolPanelUi");
             this.gridOptionsWrapper.getApi().refreshHeader();
         }
     }
     
     private onPivotModeChanged(): void {
-        var pivotModeActive = this.columnController.isPivotMode();
+        let pivotModeActive = this.columnController.isPivotMode();
         this.cbPivotMode.setSelected(pivotModeActive);
     }
 }

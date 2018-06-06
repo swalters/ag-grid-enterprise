@@ -1,10 +1,16 @@
-// ag-grid-enterprise v10.0.1
+// ag-grid-enterprise v17.1.1
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
 var main_1 = require("ag-grid/main");
 var columnComponent_1 = require("./columnComponent");
 var AbstractColumnDropPanel = (function (_super) {
@@ -52,9 +58,14 @@ var AbstractColumnDropPanel = (function (_super) {
             onDragging: this.onDragging.bind(this),
             onDragEnter: this.onDragEnter.bind(this),
             onDragLeave: this.onDragLeave.bind(this),
-            onDragStop: this.onDragStop.bind(this)
+            onDragStop: this.onDragStop.bind(this),
+            isInterestedIn: this.isInterestedIn.bind(this)
         };
         this.beans.dragAndDropService.addDropTarget(this.dropTarget);
+    };
+    AbstractColumnDropPanel.prototype.isInterestedIn = function (type) {
+        // not interested in row drags
+        return type === main_1.DragSourceType.HeaderCell || type === main_1.DragSourceType.ToolPanel;
     };
     AbstractColumnDropPanel.prototype.checkInsertIndex = function (draggingEvent) {
         var newIndex;
@@ -121,7 +132,7 @@ var AbstractColumnDropPanel = (function (_super) {
             return;
         }
         this.state = AbstractColumnDropPanel.STATE_REARRANGE_COLUMNS;
-        this.potentialDndColumns = draggingEvent.dragSource.dragItem;
+        this.potentialDndColumns = draggingEvent.dragSource.dragItemCallback().columns;
         this.refreshGui();
         this.checkInsertIndex(draggingEvent);
         this.refreshGui();
@@ -135,7 +146,7 @@ var AbstractColumnDropPanel = (function (_super) {
     };
     AbstractColumnDropPanel.prototype.onDragEnter = function (draggingEvent) {
         // this will contain all columns that are potential drops
-        var dragColumns = draggingEvent.dragSource.dragItem;
+        var dragColumns = draggingEvent.dragSource.dragItemCallback().columns;
         this.state = AbstractColumnDropPanel.STATE_NEW_COLUMNS_IN;
         // take out columns that are not groupable
         var goodDragColumns = main_1.Utils.filter(dragColumns, this.isColumnDroppable.bind(this));
@@ -153,7 +164,7 @@ var AbstractColumnDropPanel = (function (_super) {
         // if the dragging started from us, we remove the group, however if it started
         // someplace else, then we don't, as it was only 'asking'
         if (this.state === AbstractColumnDropPanel.STATE_REARRANGE_COLUMNS) {
-            var columns = draggingEvent.dragSource.dragItem;
+            var columns = draggingEvent.dragSource.dragItemCallback().columns;
             this.removeColumns(columns);
         }
         if (this.potentialDndColumns) {
@@ -256,12 +267,15 @@ var AbstractColumnDropPanel = (function (_super) {
                 itemsToAddToGui.push(columnComponent);
             });
         }
+        var eContainer = document.createElement('div');
+        main_1._.addCssClass(eContainer, 'ag-column-drop-list');
+        this.getGui().appendChild(eContainer);
         itemsToAddToGui.forEach(function (columnComponent, index) {
             var needSeparator = index !== 0;
             if (needSeparator) {
-                _this.addArrowToGui();
+                _this.addArrow(eContainer);
             }
-            _this.getGui().appendChild(columnComponent.getGui());
+            eContainer.appendChild(columnComponent.getGui());
         });
     };
     AbstractColumnDropPanel.prototype.createColumnComponent = function (column, ghost) {
@@ -277,16 +291,18 @@ var AbstractColumnDropPanel = (function (_super) {
     AbstractColumnDropPanel.prototype.addIconAndTitleToGui = function () {
         var iconFaded = this.horizontal && this.isExistingColumnsEmpty();
         var eGroupIcon = this.params.icon;
+        var eContainer = document.createElement('div');
         main_1.Utils.addCssClass(eGroupIcon, 'ag-column-drop-icon');
         main_1.Utils.addOrRemoveCssClass(eGroupIcon, 'ag-faded', iconFaded);
-        this.getGui().appendChild(eGroupIcon);
+        eContainer.appendChild(eGroupIcon);
         if (!this.horizontal) {
             var eTitle = document.createElement('span');
             eTitle.innerHTML = this.params.title;
             main_1.Utils.addCssClass(eTitle, 'ag-column-drop-title');
             main_1.Utils.addOrRemoveCssClass(eTitle, 'ag-faded', iconFaded);
-            this.getGui().appendChild(eTitle);
+            eContainer.appendChild(eTitle);
         }
+        this.getGui().appendChild(eContainer);
     };
     AbstractColumnDropPanel.prototype.isExistingColumnsEmpty = function () {
         return this.getExistingColumns().length === 0;
@@ -301,23 +317,25 @@ var AbstractColumnDropPanel = (function (_super) {
         main_1.Utils.addCssClass(eMessage, 'ag-column-drop-empty-message');
         this.getGui().appendChild(eMessage);
     };
-    AbstractColumnDropPanel.prototype.addArrowToGui = function () {
+    AbstractColumnDropPanel.prototype.addArrow = function (eParent) {
         // only add the arrows if the layout is horizontal
         if (this.horizontal) {
             // for RTL it's a left arrow, otherwise it's a right arrow
             var enableRtl = this.beans.gridOptionsWrapper.isEnableRtl();
             var charCode = enableRtl ?
                 AbstractColumnDropPanel.CHAR_LEFT_ARROW : AbstractColumnDropPanel.CHAR_RIGHT_ARROW;
+            var spanClass = enableRtl ? 'ag-left-arrow' : 'ag-right-arrow';
             var eArrow = document.createElement('span');
+            eArrow.className = spanClass;
             eArrow.innerHTML = charCode;
-            this.getGui().appendChild(eArrow);
+            eParent.appendChild(eArrow);
         }
     };
+    AbstractColumnDropPanel.STATE_NOT_DRAGGING = 'notDragging';
+    AbstractColumnDropPanel.STATE_NEW_COLUMNS_IN = 'newColumnsIn';
+    AbstractColumnDropPanel.STATE_REARRANGE_COLUMNS = 'rearrangeColumns';
+    AbstractColumnDropPanel.CHAR_LEFT_ARROW = '&#8592;';
+    AbstractColumnDropPanel.CHAR_RIGHT_ARROW = '&#8594;';
     return AbstractColumnDropPanel;
 }(main_1.Component));
-AbstractColumnDropPanel.STATE_NOT_DRAGGING = 'notDragging';
-AbstractColumnDropPanel.STATE_NEW_COLUMNS_IN = 'newColumnsIn';
-AbstractColumnDropPanel.STATE_REARRANGE_COLUMNS = 'rearrangeColumns';
-AbstractColumnDropPanel.CHAR_LEFT_ARROW = '&#8592;';
-AbstractColumnDropPanel.CHAR_RIGHT_ARROW = '&#8594;';
 exports.AbstractColumnDropPanel = AbstractColumnDropPanel;

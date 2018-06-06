@@ -1,24 +1,24 @@
-import {Bean, CellEditorFactory, Autowired, FilterManager, PostConstruct, PreConstruct} from "ag-grid/main";
+import {Autowired, Bean, CellEditorFactory, ComponentProvider, FilterManager, PostConstruct} from "ag-grid/main";
 import {SetFilter} from "./setFilter/setFilter";
 import {RichSelectCellEditor} from "./rendering/richSelect/richSelectCellEditor";
 import {LicenseManager} from "./licenseManager";
+import {DetailCellRenderer} from "./rendering/detail/detailCellRenderer";
 
 @Bean('enterpriseBoot')
 export class EnterpriseBoot {
 
-    private static RICH_SELECT = 'richSelect';
-
     @Autowired('filterManager') private filterManager: FilterManager;
     @Autowired('cellEditorFactory') private cellEditorFactory: CellEditorFactory;
     @Autowired('licenseManager') private licenseManager: LicenseManager;
+    @Autowired('componentProvider') private componentProvider: ComponentProvider;
 
-    @PreConstruct
+    @PostConstruct
     private init(): void {
-        this.filterManager.registerFilter('set', SetFilter);
-        this.cellEditorFactory.addCellEditor(EnterpriseBoot.RICH_SELECT, RichSelectCellEditor);
+        this.componentProvider.registerDefaultComponent('agRichSelect', RichSelectCellEditor);
+        this.componentProvider.registerDefaultComponent('agRichSelectCellEditor', RichSelectCellEditor);
+        this.componentProvider.registerDefaultComponent('agSetColumnFilter', SetFilter);
+        this.componentProvider.registerDefaultComponent('agDetailCellRenderer', DetailCellRenderer);
 
         this.licenseManager.validateLicense();
     }
-
-
 }

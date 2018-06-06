@@ -1,24 +1,40 @@
-// ag-grid-enterprise v10.0.1
+// ag-grid-enterprise v17.1.1
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var main_1 = require("ag-grid/main");
+var ag_grid_1 = require("ag-grid");
 // we cannot have 'null' as a key in a JavaScript map,
 // it needs to be a string. so we use this string for
 // storing null values.
 var NULL_VALUE = '___NULL___';
+var SetFilterModelValuesType;
+(function (SetFilterModelValuesType) {
+    SetFilterModelValuesType[SetFilterModelValuesType["PROVIDED_LIST"] = 0] = "PROVIDED_LIST";
+    SetFilterModelValuesType[SetFilterModelValuesType["PROVIDED_CB"] = 1] = "PROVIDED_CB";
+    SetFilterModelValuesType[SetFilterModelValuesType["NOT_PROVIDED"] = 2] = "NOT_PROVIDED";
+})(SetFilterModelValuesType = exports.SetFilterModelValuesType || (exports.SetFilterModelValuesType = {}));
 var SetFilterModel = (function () {
-    function SetFilterModel(colDef, rowModel, valueGetter, doesRowPassOtherFilters, suppressSorting) {
+    function SetFilterModel(colDef, rowModel, valueGetter, doesRowPassOtherFilters, suppressSorting, modelUpdatedFunc, isLoadingFunc, valueFormatterService, column) {
         this.suppressSorting = suppressSorting;
         this.colDef = colDef;
-        this.rowModel = rowModel;
         this.valueGetter = valueGetter;
         this.doesRowPassOtherFilters = doesRowPassOtherFilters;
+        this.modelUpdatedFunc = modelUpdatedFunc;
+        this.isLoadingFunc = isLoadingFunc;
+        this.valueFormatterService = valueFormatterService;
+        this.column = column;
+        if (rowModel.getType() === ag_grid_1.Constants.ROW_MODEL_TYPE_IN_MEMORY) {
+            this.inMemoryRowModel = rowModel;
+        }
         this.filterParams = this.colDef.filterParams ? this.colDef.filterParams : {};
-        if (main_1.Utils.exists(this.filterParams)) {
-            this.usingProvidedSet = main_1.Utils.exists(this.filterParams.values);
+        if (main_1.Utils.exists(this.filterParams) && main_1.Utils.exists(this.filterParams.values)) {
+            this.valuesType = Array.isArray(this.filterParams.values) ?
+                SetFilterModelValuesType.PROVIDED_LIST :
+                SetFilterModelValuesType.PROVIDED_CB;
             this.showingAvailableOnly = this.filterParams.suppressRemoveEntries !== true;
         }
         else {
-            this.usingProvidedSet = false;
+            this.valuesType = SetFilterModelValuesType.NOT_PROVIDED;
             this.showingAvailableOnly = true;
         }
         this.createAllUniqueValues();
@@ -31,12 +47,23 @@ var SetFilterModel = (function () {
         // the length of the array is thousands of records long
         this.selectedValuesMap = {};
         this.selectEverything();
+        this.formatter = this.filterParams.textFormatter ? this.filterParams.textFormatter : main_1.TextFilter.DEFAULT_FORMATTER;
     }
     // if keepSelection not set will always select all filters
     // if keepSelection set will keep current state of selected filters
     //    unless selectAll chosen in which case will select all
     SetFilterModel.prototype.refreshAfterNewRowsLoaded = function (keepSelection, isSelectAll) {
         this.createAllUniqueValues();
+        this.refreshSelection(keepSelection, isSelectAll);
+    };
+    // if keepSelection not set will always select all filters
+    // if keepSelection set will keep current state of selected filters
+    //    unless selectAll chosen in which case will select all
+    SetFilterModel.prototype.refreshValues = function (valuesToUse, keepSelection, isSelectAll) {
+        this.setValues(valuesToUse);
+        this.refreshSelection(keepSelection, isSelectAll);
+    };
+    SetFilterModel.prototype.refreshSelection = function (keepSelection, isSelectAll) {
         this.createAvailableUniqueValues();
         var oldModel = Object.keys(this.selectedValuesMap);
         this.selectedValuesMap = {};
@@ -55,19 +82,63 @@ var SetFilterModel = (function () {
         }
     };
     SetFilterModel.prototype.createAllUniqueValues = function () {
-        if (this.usingProvidedSet) {
-            this.allUniqueValues = main_1.Utils.toStrings(this.filterParams.values);
+        if (this.areValuesSync()) {
+            var valuesToUse = this.extractSyncValuesToUse();
+            this.setValues(valuesToUse);
+            this.filterValuesPromise = ag_grid_1.Promise.resolve(null);
         }
         else {
-            var uniqueValuesAsAnyObjects = this.getUniqueValues(false);
-            this.allUniqueValues = main_1.Utils.toStrings(uniqueValuesAsAnyObjects);
+            this.filterValuesExternalPromise = ag_grid_1.Promise.external();
+            this.filterValuesPromise = this.filterValuesExternalPromise.promise;
+            this.isLoadingFunc(true);
+            this.setValues([]);
+            var callback = this.filterParams.values;
+            var params = {
+                success: this.onAsyncValuesLoaded.bind(this),
+                colDef: this.colDef
+            };
+            callback(params);
         }
+    };
+    SetFilterModel.prototype.onAsyncValuesLoaded = function (values) {
+        this.modelUpdatedFunc(values);
+        this.isLoadingFunc(false);
+        this.filterValuesExternalPromise.resolve(values);
+    };
+    SetFilterModel.prototype.areValuesSync = function () {
+        return this.valuesType == SetFilterModelValuesType.PROVIDED_LIST || this.valuesType == SetFilterModelValuesType.NOT_PROVIDED;
+    };
+    SetFilterModel.prototype.setValuesType = function (value) {
+        this.valuesType = value;
+    };
+    SetFilterModel.prototype.setValues = function (valuesToUse) {
+        this.allUniqueValues = valuesToUse;
         if (!this.suppressSorting) {
             this.sortValues(this.allUniqueValues);
         }
     };
+    SetFilterModel.prototype.extractSyncValuesToUse = function () {
+        var valuesToUse;
+        if (this.valuesType == SetFilterModelValuesType.PROVIDED_LIST) {
+            if (Array.isArray(this.filterParams.values)) {
+                valuesToUse = main_1.Utils.toStrings(this.filterParams.values);
+            }
+            else {
+                // In this case the values are async but have already been resolved, so we can reuse them
+                valuesToUse = this.allUniqueValues;
+            }
+        }
+        else if (this.valuesType == SetFilterModelValuesType.PROVIDED_CB) {
+            throw Error("ag-grid: Error extracting values to use. We should not extract the values synchronously when using a callback for the filterParams.values");
+        }
+        else {
+            var uniqueValuesAsAnyObjects = this.getUniqueValues(false);
+            valuesToUse = main_1.Utils.toStrings(uniqueValuesAsAnyObjects);
+        }
+        return valuesToUse;
+    };
     SetFilterModel.prototype.createAvailableUniqueValues = function () {
-        var dontCheckAvailableValues = !this.showingAvailableOnly || this.usingProvidedSet;
+        var dontCheckAvailableValues = !this.showingAvailableOnly || this.valuesType == SetFilterModelValuesType.PROVIDED_LIST || this.valuesType == SetFilterModelValuesType.PROVIDED_CB;
         if (dontCheckAvailableValues) {
             this.availableUniqueValues = this.allUniqueValues;
             return;
@@ -91,32 +162,37 @@ var SetFilterModel = (function () {
         var _this = this;
         var uniqueCheck = {};
         var result = [];
-        if (!this.rowModel.forEachLeafNode) {
+        if (!this.inMemoryRowModel) {
             console.error('ag-Grid: Set Filter cannot initialise because you are using a row model that does not contain all rows in the browser. Either use a different filter type, or configure Set Filter such that you provide it with values');
             return [];
         }
-        this.rowModel.forEachLeafNode(function (node) {
-            if (!node.group) {
-                var value = _this.valueGetter(node);
-                if (_this.colDef.keyCreator) {
-                    value = _this.colDef.keyCreator({ value: value });
+        this.inMemoryRowModel.forEachLeafNode(function (node) {
+            // only pull values from rows that have data. this means we skip filler group nodes.
+            if (!node.data) {
+                return;
+            }
+            var value = _this.valueGetter(node);
+            if (_this.colDef.keyCreator) {
+                value = _this.colDef.keyCreator({ value: value });
+            }
+            if (_this.colDef.refData) {
+                value = _this.colDef.refData[value];
+            }
+            if (value === "" || value === undefined) {
+                value = null;
+            }
+            if (filterOutNotAvailable) {
+                if (!_this.doesRowPassOtherFilters(node)) {
+                    return;
                 }
-                if (value === "" || value === undefined) {
-                    value = null;
+            }
+            if (value != null && Array.isArray(value)) {
+                for (var j = 0; j < value.length; j++) {
+                    addUniqueValueIfMissing(value[j]);
                 }
-                if (filterOutNotAvailable) {
-                    if (!_this.doesRowPassOtherFilters(node)) {
-                        return;
-                    }
-                }
-                if (value != null && Array.isArray(value)) {
-                    for (var j = 0; j < value.length; j++) {
-                        addUniqueValueIfMissing(value[j]);
-                    }
-                }
-                else {
-                    addUniqueValueIfMissing(value);
-                }
+            }
+            else {
+                addUniqueValueIfMissing(value);
             }
         });
         function addUniqueValueIfMissing(value) {
@@ -149,11 +225,26 @@ var SetFilterModel = (function () {
         }
         // if filter present, we filter down the list
         this.displayedValues = [];
-        var miniFilterUpperCase = this.miniFilter.toUpperCase();
+        var miniFilter = this.formatter(this.miniFilter);
+        // make upper case to have search case insensitive
+        var miniFilterUpperCase = miniFilter.toUpperCase();
         for (var i = 0, l = this.availableUniqueValues.length; i < l; i++) {
-            var filteredValue = this.availableUniqueValues[i];
-            if (filteredValue !== null && filteredValue.toString().toUpperCase().indexOf(miniFilterUpperCase) >= 0) {
-                this.displayedValues.push(filteredValue);
+            var value = this.availableUniqueValues[i];
+            if (value) {
+                var displayedValue = this.formatter(value.toString());
+                //This function encapsulates the logic to check if a string matches the mini filter
+                var matchesFn = function (valueToCheck) {
+                    if (valueToCheck === null) {
+                        return false;
+                    }
+                    // allow for case insensitive searches, make both filter and value uppercase
+                    var valueUpperCase = valueToCheck.toUpperCase();
+                    return valueUpperCase.indexOf(miniFilterUpperCase) >= 0;
+                };
+                var formattedValue = this.valueFormatterService.formatValue(this.column, null, null, displayedValue);
+                if (matchesFn(displayedValue) || matchesFn(formattedValue)) {
+                    this.displayedValues.push(displayedValue);
+                }
             }
         }
     };
@@ -264,11 +355,24 @@ var SetFilterModel = (function () {
         return selectedValues;
     };
     SetFilterModel.prototype.setModel = function (model, isSelectAll) {
+        var _this = this;
+        if (isSelectAll === void 0) { isSelectAll = false; }
+        if (this.areValuesSync()) {
+            this.setSyncModel(model, isSelectAll);
+        }
+        else {
+            this.filterValuesExternalPromise.promise.then(function (values) {
+                _this.modelUpdatedFunc(values, model);
+            });
+        }
+    };
+    SetFilterModel.prototype.setSyncModel = function (model, isSelectAll) {
         if (isSelectAll === void 0) { isSelectAll = false; }
         if (model && !isSelectAll) {
             this.selectNothing();
             for (var i = 0; i < model.length; i++) {
-                var value = model[i];
+                var rawValue = model[i];
+                var value = this.keyToValue(rawValue);
                 if (this.allUniqueValues.indexOf(value) >= 0) {
                     this.selectValue(value);
                 }
@@ -277,6 +381,14 @@ var SetFilterModel = (function () {
         else {
             this.selectEverything();
         }
+    };
+    SetFilterModel.prototype.onFilterValuesReady = function (callback) {
+        //This guarantees that if the user is racing to set values async into the set filter, only the first instance
+        //will be used
+        // ie Values are async and the user manually wants to override them before the retrieval of values is triggered
+        // (set filter values in the following example)
+        // http://plnkr.co/edit/eFka7ynvPj68tL3VJFWf?p=preview
+        this.filterValuesPromise.firstOneOnly(callback);
     };
     return SetFilterModel;
 }());

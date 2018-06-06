@@ -1,4 +1,4 @@
-// ag-grid-enterprise v10.0.1
+// ag-grid-enterprise v17.1.1
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -9,6 +9,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+Object.defineProperty(exports, "__esModule", { value: true });
 var main_1 = require("ag-grid/main");
 var pivotColDefService_1 = require("./pivotColDefService");
 var PivotStage = (function () {
@@ -17,30 +18,40 @@ var PivotStage = (function () {
     }
     PivotStage.prototype.execute = function (params) {
         var rootNode = params.rowNode;
+        var changedPath = params.changedPath;
         if (this.columnController.isPivotActive()) {
-            this.executePivotOn(rootNode);
+            this.executePivotOn(rootNode, changedPath);
         }
         else {
-            this.executePivotOff();
+            this.executePivotOff(changedPath);
         }
     };
-    PivotStage.prototype.executePivotOff = function () {
+    PivotStage.prototype.executePivotOff = function (changedPath) {
         this.aggregationColumnsHashLastTime = null;
         this.uniqueValues = {};
-        this.columnController.setSecondaryColumns(null);
+        if (this.columnController.isSecondaryColumnsPresent()) {
+            this.columnController.setSecondaryColumns(null, "rowModelUpdated");
+            changedPath.setInactive();
+        }
     };
-    PivotStage.prototype.executePivotOn = function (rootNode) {
+    PivotStage.prototype.executePivotOn = function (rootNode, changedPath) {
         var uniqueValues = this.bucketUpRowNodes(rootNode);
         var uniqueValuesChanged = this.setUniqueValues(uniqueValues);
         var aggregationColumns = this.columnController.getValueColumns();
         var aggregationColumnsHash = aggregationColumns.map(function (column) { return column.getId(); }).join('#');
+        var aggregationFuncsHash = aggregationColumns.map(function (column) { return column.getAggFunc().toString(); }).join('#');
         var aggregationColumnsChanged = this.aggregationColumnsHashLastTime !== aggregationColumnsHash;
+        var aggregationFuncsChanged = this.aggregationFuncsHashLastTime !== aggregationFuncsHash;
         this.aggregationColumnsHashLastTime = aggregationColumnsHash;
-        if (uniqueValuesChanged || aggregationColumnsChanged) {
+        this.aggregationFuncsHashLastTime = aggregationFuncsHash;
+        if (uniqueValuesChanged || aggregationColumnsChanged || aggregationFuncsChanged) {
             var result = this.pivotColDefService.createPivotColumnDefs(this.uniqueValues);
             this.pivotColumnGroupDefs = result.pivotColumnGroupDefs;
             this.pivotColumnDefs = result.pivotColumnDefs;
-            this.columnController.setSecondaryColumns(this.pivotColumnGroupDefs);
+            this.columnController.setSecondaryColumns(this.pivotColumnGroupDefs, "rowModelUpdated");
+            // because the secondary columns have changed, then the aggregation needs to visit the whole
+            // tree again, so we make the changedPath not active, to force aggregation to visit all paths.
+            changedPath.setInactive();
         }
     };
     PivotStage.prototype.setUniqueValues = function (newValues) {
@@ -59,22 +70,22 @@ var PivotStage = (function () {
     };
     // returns true if values were different
     PivotStage.prototype.bucketUpRowNodes = function (rootNode) {
+        var _this = this;
         // accessed from inside inner function
         var uniqueValues = {};
-        var that = this;
-        recursivelySearchForLeafNodes(rootNode);
-        return uniqueValues;
         // finds all leaf groups and calls mapRowNode with it
-        function recursivelySearchForLeafNodes(rowNode) {
+        var recursivelySearchForLeafNodes = function (rowNode) {
             if (rowNode.leafGroup) {
-                that.bucketRowNode(rowNode, uniqueValues);
+                _this.bucketRowNode(rowNode, uniqueValues);
             }
             else {
                 rowNode.childrenAfterFilter.forEach(function (child) {
                     recursivelySearchForLeafNodes(child);
                 });
             }
-        }
+        };
+        recursivelySearchForLeafNodes(rootNode);
+        return uniqueValues;
     };
     PivotStage.prototype.bucketRowNode = function (rowNode, uniqueValues) {
         var pivotColumns = this.columnController.getPivotColumns();
@@ -90,7 +101,7 @@ var PivotStage = (function () {
         var pivotColumn = pivotColumns[pivotIndex];
         // map the children out based on the pivot column
         children.forEach(function (child) {
-            var key = _this.valueService.getValue(pivotColumn, child);
+            var key = _this.valueService.getKeyForNode(pivotColumn, child);
             if (main_1.Utils.missing(key)) {
                 key = '';
             }
@@ -107,39 +118,39 @@ var PivotStage = (function () {
             return mappedChildren;
         }
         else {
-            var result = {};
+            var result_1 = {};
             main_1.Utils.iterateObject(mappedChildren, function (key, value) {
-                result[key] = _this.bucketChildren(value, pivotColumns, pivotIndex + 1, uniqueValues[key]);
+                result_1[key] = _this.bucketChildren(value, pivotColumns, pivotIndex + 1, uniqueValues[key]);
             });
-            return result;
+            return result_1;
         }
     };
     PivotStage.prototype.getPivotColumnDefs = function () {
         return this.pivotColumnDefs;
     };
+    __decorate([
+        main_1.Autowired('rowModel'),
+        __metadata("design:type", Object)
+    ], PivotStage.prototype, "rowModel", void 0);
+    __decorate([
+        main_1.Autowired('valueService'),
+        __metadata("design:type", main_1.ValueService)
+    ], PivotStage.prototype, "valueService", void 0);
+    __decorate([
+        main_1.Autowired('columnController'),
+        __metadata("design:type", main_1.ColumnController)
+    ], PivotStage.prototype, "columnController", void 0);
+    __decorate([
+        main_1.Autowired('eventService'),
+        __metadata("design:type", main_1.EventService)
+    ], PivotStage.prototype, "eventService", void 0);
+    __decorate([
+        main_1.Autowired('pivotColDefService'),
+        __metadata("design:type", pivotColDefService_1.PivotColDefService)
+    ], PivotStage.prototype, "pivotColDefService", void 0);
+    PivotStage = __decorate([
+        main_1.Bean('pivotStage')
+    ], PivotStage);
     return PivotStage;
 }());
-__decorate([
-    main_1.Autowired('rowModel'),
-    __metadata("design:type", Object)
-], PivotStage.prototype, "rowModel", void 0);
-__decorate([
-    main_1.Autowired('valueService'),
-    __metadata("design:type", main_1.ValueService)
-], PivotStage.prototype, "valueService", void 0);
-__decorate([
-    main_1.Autowired('columnController'),
-    __metadata("design:type", main_1.ColumnController)
-], PivotStage.prototype, "columnController", void 0);
-__decorate([
-    main_1.Autowired('eventService'),
-    __metadata("design:type", main_1.EventService)
-], PivotStage.prototype, "eventService", void 0);
-__decorate([
-    main_1.Autowired('pivotColDefService'),
-    __metadata("design:type", pivotColDefService_1.PivotColDefService)
-], PivotStage.prototype, "pivotColDefService", void 0);
-PivotStage = __decorate([
-    main_1.Bean('pivotStage')
-], PivotStage);
 exports.PivotStage = PivotStage;

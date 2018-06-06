@@ -1,12 +1,17 @@
-// ag-grid-enterprise v10.0.1
+// ag-grid-enterprise v17.1.1
 import { Component } from "ag-grid/main";
-export declare class ToolPanelComp extends Component {
-    private static TEMPLATE;
+import { IToolPanel } from "ag-grid";
+export declare class ToolPanelComp extends Component implements IToolPanel {
     private context;
+    private eventService;
     private gridOptionsWrapper;
+    private buttonComp;
+    private columnPanel;
     private initialised;
     constructor();
-    setVisible(visible: boolean): void;
+    private postConstruct();
     init(): void;
-    private addComponent(component);
+    refresh(): void;
+    showToolPanel(show: boolean): void;
+    isToolPanelShowing(): boolean;
 }

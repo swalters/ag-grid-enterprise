@@ -1,5 +1,5 @@
-// ag-grid-enterprise v10.0.1
-import { IRowNodeStage, StageExecuteParams, ColDef } from "ag-grid/main";
+// ag-grid-enterprise v17.1.1
+import { ColDef, IRowNodeStage, StageExecuteParams } from "ag-grid/main";
 export declare class PivotStage implements IRowNodeStage {
     private rowModel;
     private valueService;
@@ -10,9 +10,10 @@ export declare class PivotStage implements IRowNodeStage {
     private pivotColumnGroupDefs;
     private pivotColumnDefs;
     private aggregationColumnsHashLastTime;
+    private aggregationFuncsHashLastTime;
     execute(params: StageExecuteParams): void;
-    private executePivotOff();
-    private executePivotOn(rootNode);
+    private executePivotOff(changedPath);
+    private executePivotOn(rootNode, changedPath);
     private setUniqueValues(newValues);
     private bucketUpRowNodes(rootNode);
     private bucketRowNode(rowNode, uniqueValues);

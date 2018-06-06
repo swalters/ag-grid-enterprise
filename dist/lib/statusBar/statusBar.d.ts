@@ -1,19 +1,16 @@
-// ag-grid-enterprise v10.0.1
+// ag-grid-enterprise v17.1.1
 import { Component } from 'ag-grid/main';
 export declare class StatusBar extends Component {
     private static TEMPLATE;
-    private gridApi;
     private eventService;
     private rangeController;
     private valueService;
     private cellNavigationService;
-    private floatingRowModel;
+    private pinnedRowModel;
     private rowModel;
     private context;
     private gridOptionsWrapper;
-    private totalItems;
-    private filteredItems;
-    private selectedItems;
+    private gridCore;
     private statusItemSum;
     private statusItemCount;
     private statusItemMin;
@@ -27,6 +24,4 @@ export declare class StatusBar extends Component {
     private forEachStatusItem(callback);
     private onRangeSelectionChanged();
     private getRowNode(gridRow);
-    private onSelectionChanged();
-    private onRowDataChanged();
 }

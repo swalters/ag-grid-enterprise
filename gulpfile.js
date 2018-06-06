@@ -8,6 +8,7 @@ var clean = require('gulp-clean');
 var webpack = require('webpack');
 var webpackStream = require('webpack-stream');
 var path = require('path');
+const rename = require("gulp-rename");
 
 var headerTemplate = '// <%= pkg.name %> v<%= pkg.version %>\n';
 
@@ -23,13 +24,23 @@ gulp.task('webpack-noStyle', ['tsc'], webpackTask.bind(null, false, false));
 gulp.task('webpack-minify', ['tsc'], webpackTask.bind(null, true, true));
 gulp.task('webpack', ['tsc'], webpackTask.bind(null, false, true));
 
-gulp.task('tsc', ['cleanDist'], tscTask);
+gulp.task('tsc', ['tsc-src'], tscExportsTask);
+gulp.task('tsc-src', ['cleanDist'], tscTask);
+gulp.task('tsc-exports', ['cleanExports'], tscExportsTask);
+// gulp.task('tsc', ['cleanDist'], tscTask);
 
 gulp.task('cleanDist', cleanDist);
+gulp.task('cleanExports', cleanExports);
 
 function cleanDist() {
     return gulp
         .src('dist', {read: false})
+        .pipe(clean());
+}
+
+function cleanExports() {
+    return gulp
+        .src(['./main.d.ts','main.js'], {read: false})
         .pipe(clean());
 }
 
@@ -38,7 +49,6 @@ function tscTask() {
 
     var tsResult = gulp
         .src('src/**/*.ts')
-        //.pipe(sourcemaps.init())
         .pipe(gulpTypescript(project));
 
     return merge([
@@ -48,6 +58,25 @@ function tscTask() {
         tsResult.js
             .pipe(header(headerTemplate, {pkg: pkg}))
             .pipe(gulp.dest('dist/lib'))
+    ])
+}
+
+function tscExportsTask() {
+    const project = gulpTypescript.createProject('./tsconfig-exports.json', {typescript: typescript});
+
+    const tsResult = gulp
+        .src('./exports.ts')
+        .pipe(gulpTypescript(project));
+
+    return merge([
+        tsResult.dts
+            .pipe(header(headerTemplate, { pkg : pkg }))
+            .pipe(rename("main.d.ts"))
+            .pipe(gulp.dest('./')),
+        tsResult.js
+            .pipe(header(headerTemplate, { pkg : pkg }))
+            .pipe(rename("main.js"))
+            .pipe(gulp.dest('./'))
     ])
 }
 
@@ -63,6 +92,9 @@ function webpackTask(minify, styles) {
                     },
                     compress: {
                         warnings: false
+                    },
+                    mangle: {
+                        except:['csvCreator','CsvCreator']
                     }
                 }
             )
@@ -97,3 +129,10 @@ function webpackTask(minify, styles) {
         .pipe(header(bundleTemplate, {pkg: pkg}))
         .pipe(gulp.dest('./dist/'));
 }
+
+gulp.task('publishForCI', () => {
+    return gulp.src("./ag-grid-enterprise*.tgz")
+        .pipe(rename("ag-grid-enterprise.tgz"))
+        .pipe(gulp.dest("c:/ci/ag-grid-enterprise/"));
+
+});

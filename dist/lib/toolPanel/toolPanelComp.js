@@ -1,10 +1,15 @@
-// ag-grid-enterprise v10.0.1
+// ag-grid-enterprise v17.1.1
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -14,63 +19,110 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+Object.defineProperty(exports, "__esModule", { value: true });
 var main_1 = require("ag-grid/main");
-var columnSelectPanel_1 = require("./columnsSelect/columnSelectPanel");
-var rowGroupColumnsPanel_1 = require("./columnDrop/rowGroupColumnsPanel");
-var pivotColumnsPanel_1 = require("./columnDrop/pivotColumnsPanel");
-var pivotModePanel_1 = require("./columnDrop/pivotModePanel");
-var valueColumnsPanel_1 = require("./columnDrop/valueColumnsPanel");
-var ToolPanelComp = ToolPanelComp_1 = (function (_super) {
+var columnPanel_1 = require("./columnPanel");
+var ToolPanelComp = (function (_super) {
     __extends(ToolPanelComp, _super);
     function ToolPanelComp() {
-        var _this = _super.call(this, ToolPanelComp_1.TEMPLATE) || this;
+        var _this = _super.call(this, "<div class=\"ag-tool-panel\"/>") || this;
+        // solves a race condition, where this is getting initialised after the grid core.
+        // so gridCore also calls init()
         _this.initialised = false;
         return _this;
     }
-    // lazy initialise the toolPanel
-    ToolPanelComp.prototype.setVisible = function (visible) {
-        _super.prototype.setVisible.call(this, visible);
-        if (visible && !this.initialised) {
-            this.init();
-        }
+    ToolPanelComp.prototype.postConstruct = function () {
+        this.init();
     };
     ToolPanelComp.prototype.init = function () {
-        if (!this.gridOptionsWrapper.isToolPanelSuppressPivotMode()) {
-            this.addComponent(new pivotModePanel_1.PivotModePanel());
-        }
-        this.addComponent(new columnSelectPanel_1.ColumnSelectPanel(true));
-        if (!this.gridOptionsWrapper.isToolPanelSuppressRowGroups()) {
-            this.addComponent(new rowGroupColumnsPanel_1.RowGroupColumnsPanel(false));
-        }
-        if (!this.gridOptionsWrapper.isToolPanelSuppressValues()) {
-            this.addComponent(new valueColumnsPanel_1.ValuesColumnPanel(false));
-        }
-        if (!this.gridOptionsWrapper.isToolPanelSuppressPivots()) {
-            this.addComponent(new pivotColumnsPanel_1.PivotColumnsPanel(false));
+        if (this.initialised) {
+            return;
         }
         this.initialised = true;
+        this.columnPanel = new columnPanel_1.ColumnPanel();
+        this.buttonComp = new PanelSelectComp(this.columnPanel);
+        this.context.wireBean(this.columnPanel);
+        this.context.wireBean(this.buttonComp);
+        this.appendChild(this.buttonComp);
+        this.appendChild(this.columnPanel);
     };
-    ToolPanelComp.prototype.addComponent = function (component) {
-        this.context.wireBean(component);
-        this.getGui().appendChild(component.getGui());
-        this.addDestroyFunc(function () {
-            component.destroy();
-        });
+    ToolPanelComp.prototype.refresh = function () {
+        this.columnPanel.refresh();
     };
+    ToolPanelComp.prototype.showToolPanel = function (show) {
+        this.columnPanel.setVisible(show);
+        var event = {
+            type: main_1.Events.EVENT_TOOL_PANEL_VISIBLE_CHANGED,
+            api: this.gridOptionsWrapper.getApi(),
+            columnApi: this.gridOptionsWrapper.getColumnApi()
+        };
+        this.eventService.dispatchEvent(event);
+    };
+    ToolPanelComp.prototype.isToolPanelShowing = function () {
+        return this.columnPanel.isVisible();
+    };
+    __decorate([
+        main_1.Autowired("context"),
+        __metadata("design:type", main_1.Context)
+    ], ToolPanelComp.prototype, "context", void 0);
+    __decorate([
+        main_1.Autowired("eventService"),
+        __metadata("design:type", main_1.EventService)
+    ], ToolPanelComp.prototype, "eventService", void 0);
+    __decorate([
+        main_1.Autowired("gridOptionsWrapper"),
+        __metadata("design:type", main_1.GridOptionsWrapper)
+    ], ToolPanelComp.prototype, "gridOptionsWrapper", void 0);
+    __decorate([
+        main_1.PostConstruct,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", []),
+        __metadata("design:returntype", void 0)
+    ], ToolPanelComp.prototype, "postConstruct", null);
+    ToolPanelComp = __decorate([
+        main_1.Bean("toolPanelComp"),
+        __metadata("design:paramtypes", [])
+    ], ToolPanelComp);
     return ToolPanelComp;
 }(main_1.Component));
-ToolPanelComp.TEMPLATE = '<div class="ag-tool-panel"></div>';
-__decorate([
-    main_1.Autowired('context'),
-    __metadata("design:type", main_1.Context)
-], ToolPanelComp.prototype, "context", void 0);
-__decorate([
-    main_1.Autowired('gridOptionsWrapper'),
-    __metadata("design:type", main_1.GridOptionsWrapper)
-], ToolPanelComp.prototype, "gridOptionsWrapper", void 0);
-ToolPanelComp = ToolPanelComp_1 = __decorate([
-    main_1.Bean('toolPanel'),
-    __metadata("design:paramtypes", [])
-], ToolPanelComp);
 exports.ToolPanelComp = ToolPanelComp;
-var ToolPanelComp_1;
+var PanelSelectComp = (function (_super) {
+    __extends(PanelSelectComp, _super);
+    function PanelSelectComp(columnPanel) {
+        var _this = _super.call(this) || this;
+        _this.columnPanel = columnPanel;
+        return _this;
+    }
+    PanelSelectComp.prototype.createTemplate = function () {
+        var translate = this.gridOptionsWrapper.getLocaleTextFunc();
+        return "<div class=\"ag-side-buttons\">\n                    <button type=\"button\" ref=\"toggle-button\">" + translate('columns', 'Columns') + "</button>\n                </div>";
+    };
+    PanelSelectComp.prototype.postConstruct = function () {
+        var _this = this;
+        this.setTemplate(this.createTemplate());
+        var btShow = this.getRefElement("toggle-button");
+        this.addDestroyableEventListener(btShow, 'click', function () {
+            _this.columnPanel.setVisible(!_this.columnPanel.isVisible());
+            // this gets grid to resize immediately, rather than waiting
+            // for next 500ms
+            _this.gridCore.doLayout();
+        });
+        var showButtons = !this.gridOptionsWrapper.isToolPanelSuppressSideButtons();
+        this.setVisible(showButtons);
+    };
+    __decorate([
+        main_1.Autowired("gridOptionsWrapper"),
+        __metadata("design:type", main_1.GridOptionsWrapper)
+    ], PanelSelectComp.prototype, "gridOptionsWrapper", void 0);
+    __decorate([
+        main_1.Autowired("gridCore"),
+        __metadata("design:type", main_1.GridCore)
+    ], PanelSelectComp.prototype, "gridCore", void 0);
+    __decorate([
+        main_1.PostConstruct,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", []),
+        __metadata("design:returntype", void 0)
+    ], PanelSelectComp.prototype, "postConstruct", null);
+    return PanelSelectComp;
+}(main_1.Component));

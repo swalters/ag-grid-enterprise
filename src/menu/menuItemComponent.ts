@@ -1,6 +1,17 @@
-import {GridOptionsWrapper, PostConstruct, SvgFactory, MenuItemDef, Utils as _, Component, Autowired} from "ag-grid";
+import {GridOptionsWrapper, PostConstruct, MenuItemDef, Utils as _, Component, Autowired, AgEvent} from "ag-grid";
 
-var svgFactory = SvgFactory.getInstance();
+export interface MenuItemSelectedEvent extends AgEvent {
+    name: string;
+    disabled: boolean;
+    shortcut: string;
+    action: () => void;
+    checked: boolean;
+    icon: HTMLElement | string;
+    subMenu: (MenuItemDef | string)[];
+    cssClasses: string[];
+    tooltip: string;
+    mouseEvent: MouseEvent;
+}
 
 export class MenuItemComponent extends Component {
 
@@ -29,7 +40,7 @@ export class MenuItemComponent extends Component {
     private init() {
 
         if (this.params.checked) {
-            this.queryForHtmlElement('#eIcon').innerHTML = '&#10004;';
+            this.queryForHtmlElement('#eIcon').innerHTML = '<span class="ag-icon ag-icon-tick"></span>';
         } else if (this.params.icon) {
             if (_.isNodeOrElement(this.params.icon)) {
                 this.queryForHtmlElement('#eIcon').appendChild(<HTMLElement> this.params.icon);
@@ -44,16 +55,21 @@ export class MenuItemComponent extends Component {
             // it out.
             this.queryForHtmlElement('#eIcon').innerHTML = '&nbsp;';
         }
+
+        if (this.params.tooltip){
+            this.getGui().setAttribute('title', this.params.tooltip)
+        }
+
         if (this.params.shortcut) {
             this.queryForHtmlElement('#eShortcut').innerHTML = this.params.shortcut;
         }
         if (this.params.subMenu) {
             if (this.gridOptionsWrapper.isEnableRtl()) {
                 // for RTL, we show arrow going left
-                this.queryForHtmlElement('#ePopupPointer').appendChild(svgFactory.createSmallArrowLeftSvg());
+                this.queryForHtmlElement('#ePopupPointer').classList.add('ag-icon-small-left');
             } else {
                 // for normal, we show arrow going right
-                this.queryForHtmlElement('#ePopupPointer').appendChild(svgFactory.createSmallArrowRightSvg());
+                this.queryForHtmlElement('#ePopupPointer').classList.add('ag-icon-small-right');
             }
         } else {
             this.queryForHtmlElement('#ePopupPointer').innerHTML = '&nbsp;';
@@ -71,8 +87,21 @@ export class MenuItemComponent extends Component {
         }
     }
 
-    private onOptionSelected(): void {
-        this.dispatchEvent(MenuItemComponent.EVENT_ITEM_SELECTED, this.params);
+    private onOptionSelected(mouseEvent: MouseEvent): void {
+        let event: MenuItemSelectedEvent = {
+            type: MenuItemComponent.EVENT_ITEM_SELECTED,
+            action: this.params.action,
+            checked: this.params.checked,
+            cssClasses: this.params.cssClasses,
+            disabled: this.params.disabled,
+            icon: this.params.icon,
+            name: this.params.name,
+            shortcut: this.params.shortcut,
+            subMenu: this.params.subMenu,
+            tooltip: this.params.tooltip,
+            mouseEvent: mouseEvent
+        };
+        this.dispatchEvent(event);
         if (this.params.action) {
             this.params.action();
         }
